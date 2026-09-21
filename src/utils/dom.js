@@ -626,6 +626,26 @@ export function rebuildAncestors(node) {
 		}
 		added.push(parent);
 
+		// rebuild table headers and columns
+		if (parent.nodeName === "TABLE" && ancestor.parentElement && ancestor.parentElement.contains(ancestor)) {
+			let table = ancestor;
+			let repeatHeader = window.getComputedStyle(table).getPropertyValue("--pagedjs-table-repeat-header").trim();
+
+			if (repeatHeader !== "none") {
+				let thead = table.querySelector("thead");
+				if (thead) {
+					let clone = thead.cloneNode(true);
+					parent.prepend(clone);
+				}
+
+				let colgroup = table.querySelector("colgroup");
+				if (colgroup) {
+					let clone = colgroup.cloneNode(true);
+					parent.prepend(clone);
+				}
+			}
+		}
+
 		// rebuild table rows
 		if (parent.nodeName === "TD" && ancestor.parentElement.contains(ancestor)) {
 			let td = ancestor;
