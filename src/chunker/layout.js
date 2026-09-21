@@ -139,6 +139,11 @@ class Layout {
 			forcedBreakQueue = prevBreakToken.getForcedBreakQueue();
 		}
 
+		// Tracks the most recently completed top-level source node, so a
+		// floated top-level element that overflows the page doesn't stop
+		// later siblings from getting a chance to lay out beside it.
+		let lastTopLevelNode = null;
+
 		while (!done && !newBreakToken) {
 			next = walker.next();
 			node = next.value;
@@ -170,10 +175,35 @@ class Layout {
 				}
 			}
 
+			// A node with no parentElement is a direct child of the source
+			// fragment - i.e. a new top-level element is starting, which means
+			// the previous one just finished.
+			let isTopLevelBoundary = !!node && !node.parentElement;
+
+			// A floated element doesn't consume flow position the way normal
+			// content does - later siblings can still lay out beside its
+			// remaining height even while it continues onto further pages.
+			// Skip the overflow checkpoint below so those siblings get
+			// appended and checked for their own overflow too, instead of
+			// being deferred wholesale just because the float overflowed.
+			let skipOverflowCheck =
+				!forcedBreakQueue.length &&
+				isTopLevelBoundary &&
+				lastTopLevelNode &&
+				isElement(lastTopLevelNode) &&
+				window.getComputedStyle(lastTopLevelNode).float !== "none";
+
+			if (isTopLevelBoundary) {
+				lastTopLevelNode = node;
+			}
+
 			// Check whether we have overflow when we've completed laying out a top
 			// level element. This lets it have multiple children overflowing and
 			// allows us to move all of the overflows onto the next page together.
-			if (forcedBreakQueue.length || !node || !node.parentElement) {
+			if (
+				!skipOverflowCheck &&
+				(forcedBreakQueue.length || !node || !node.parentElement)
+			) {
 				this.hooks && this.hooks.layout.trigger(wrapper, this);
 
 				let imgs = wrapper.querySelectorAll("img");

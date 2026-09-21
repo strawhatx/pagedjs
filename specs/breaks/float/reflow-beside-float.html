@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <title>Float reflow test</title>
+
+    <script src="../../../dist/paged.polyfill.js"></script>
+
+    <style>
+      @page {
+        size: 'a4';
+        margin: 22mm;
+      }
+
+      .float {
+        float: left;
+        width: 40mm;
+        background: #ccc;
+      }
+
+      .float p {
+        height: 40mm; /* forces real content height without an explicit box height */
+        margin: 0 0 2mm 0;
+      }
+
+      #tail p {
+        margin: 0 0 4mm 0;
+      }
+    </style>
+    <style media="screen">
+      @media screen {
+        .pagedjs_page {
+          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="float">
+      <p>float block 1</p>
+      <p>float block 2</p>
+      <p>float block 3</p>
+      <p>float block 4</p>
+      <p>float block 5</p>
+      <p>float block 6</p>
+      <p>float block 7</p>
+      <p>float block 8</p>
+      <p>float block 9</p>
+      <p>float block 10</p>
+      <p>float block 11</p>
+      <p>float block 12</p>
+    </div>
+    <div id="tail">
+      <p id="p1">Paragraph one should reflow beside the float and render on page 1, next to the float, rather than being deferred until the float finishes on a later page.</p>
+      <p id="p2">Paragraph two should also reflow beside the float, continuing to render on page 1 or page 2 alongside the float's remaining height, rather than being deferred.</p>
+      <p id="p3">Paragraph three should still reflow beside the float on page 2, continuing alongside the float's remaining height rather than being deferred until the float finishes.</p>
+      <p id="p4">Paragraph four should still reflow beside the float on page 2 or 3, continuing alongside the float's remaining height rather than being deferred until the float finishes.</p>
+      <p id="p5">Paragraph five is here to add enough bulk that the tail content spans multiple pages while the float is still continuing, so we can see whether paged.js interleaves correctly across more than one page break, or defers everything until the float clears on a later page entirely.</p>
+      <p id="p6">Paragraph six is here to add enough bulk that the tail content spans multiple pages while the float is still continuing, so we can see whether paged.js interleaves correctly across more than one page break, or defers everything until the float clears on a later page entirely.</p>
+    </div>
+  </body>
+</html>

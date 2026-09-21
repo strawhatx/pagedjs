@@ -27,7 +27,8 @@ export default async function() {
 	let args = CI ? ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"] : ["--disable-dev-shm-usage"];
 	const browser = await chromium.launchServer({
 		headless: !DEBUG,
-		args: args
+		args: args,
+		executablePath: process.env.PWTEST_CHROME_PATH || undefined
 	});
 	global.browser = browser;
 	mkdirp.sync(DIR);
