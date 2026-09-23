@@ -84,6 +84,27 @@ class Breaks extends Handler {
 			// Remove from CSS -- break rules handled by script
 			dList.remove(dItem);
 		}
+
+		// Source nodes are detached, so computed style can't be read from them
+		// when rebuilding a split table. Record the opt-out as data-repeat-header.
+		if (property === "--pagedjs-table-repeat-header") {
+			let value = csstree.generate(declaration.value).trim();
+			let selector = csstree.generate(rule.ruleNode.prelude);
+
+			let breaker = {
+				property: "repeat-header",
+				value: value,
+				selector: selector,
+			};
+
+			selector.split(",").forEach((s) => {
+				if (!this.breaks[s]) {
+					this.breaks[s] = [breaker];
+				} else {
+					this.breaks[s].push(breaker);
+				}
+			});
+		}
 	}
 
 	afterParsed(parsed) {

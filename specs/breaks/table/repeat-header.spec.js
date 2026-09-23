@@ -18,7 +18,11 @@ describe("breaks-table-repeat-header", () => {
 			let tables = Array.from(document.querySelectorAll("table.table:not(.no-repeat)"));
 			return {
 				tableCount: tables.length,
-				theadCount: tables.filter((table) => table.querySelector("thead")).length,
+				// A non-repeated header is still cloned for column widths, but collapsed.
+				theadCount: tables.filter((table) => {
+					let thead = table.querySelector("thead");
+					return thead && getComputedStyle(thead).visibility !== "collapse";
+				}).length,
 				colgroupCount: tables.filter((table) => table.querySelector("colgroup")).length,
 			};
 		});
@@ -33,7 +37,11 @@ describe("breaks-table-repeat-header", () => {
 			let tables = Array.from(document.querySelectorAll("table.no-repeat"));
 			return {
 				tableCount: tables.length,
-				theadCount: tables.filter((table) => table.querySelector("thead")).length,
+				// A non-repeated header is still cloned for column widths, but collapsed.
+				theadCount: tables.filter((table) => {
+					let thead = table.querySelector("thead");
+					return thead && getComputedStyle(thead).visibility !== "collapse";
+				}).length,
 			};
 		});
 

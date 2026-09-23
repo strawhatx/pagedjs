@@ -6,10 +6,8 @@ import mkdirp from "mkdirp";
 import path from "path";
 import express from "express";
 import { WS_ENDPOINT_PATH, DIR, DEBUG, CI, PORT } from "./constants.js";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Helpers run as CommonJS (see ./package.json), so __dirname is provided.
 
 const app = express();
 

@@ -186,12 +186,17 @@ class Layout {
 			// Skip the overflow checkpoint below so those siblings get
 			// appended and checked for their own overflow too, instead of
 			// being deferred wholesale just because the float overflowed.
+			// Source nodes live in a detached fragment where computed style is
+			// empty, so read the float from the rendered clone instead.
+			let lastTopLevelRendered =
+				lastTopLevelNode &&
+				isElement(lastTopLevelNode) &&
+				findElement(lastTopLevelNode, wrapper);
 			let skipOverflowCheck =
 				!forcedBreakQueue.length &&
 				isTopLevelBoundary &&
-				lastTopLevelNode &&
-				isElement(lastTopLevelNode) &&
-				window.getComputedStyle(lastTopLevelNode).float !== "none";
+				!!lastTopLevelRendered &&
+				window.getComputedStyle(lastTopLevelRendered).float !== "none";
 
 			if (isTopLevelBoundary) {
 				lastTopLevelNode = node;
@@ -1506,6 +1511,7 @@ class Layout {
 		let rangeStart = (check = node = startOfOverflow);
 		let visibleSiblings = false;
 		let rangeEnd = rendered.lastElementChild;
+		let rangeEndExtended = false;
 
 		do {
 			let checkBounds = getBoundingClientRect(check);
@@ -1569,10 +1575,16 @@ class Layout {
 				) {
 					if (!rowspanNeedsBreakAt) {
 						rangeEnd = check.parentElement.lastChild;
+						rangeEndExtended = true;
 					}
 				} else {
 					visibleSiblings = true;
-					rangeEnd = undefined;
+					// A visible sibling higher up (e.g. content beside a float) stops
+					// the range growing further, but must not discard an extension
+					// already found for the overflowing siblings further down.
+					if (!rangeEndExtended) {
+						rangeEnd = undefined;
+					}
 				}
 			}
 

@@ -463,6 +463,9 @@ export function rebuildTree(node, fragment, alreadyRendered) {
 
 			let existing = findElement(sibling, container),
 				siblingClone;
+			// Set by the Breaks handler from --pagedjs-table-repeat-header
+			let table = sibling.closest("table");
+			let repeatHeader = !table || table.dataset.repeatHeader !== "none";
 			if (!existing) {
 				siblingClone = cloneNodeAncestor(sibling, true);
 				if (alreadyRendered) {
@@ -479,13 +482,11 @@ export function rebuildTree(node, fragment, alreadyRendered) {
 								originalElement = findElement(pos, alreadyRendered);
 								copyWidth(originalElement, pos);
 
-								// I've tried to make the THEAD invisible; this is the best
-								// I could achieve. It gets a zero height but still somehow
-								// affects the container height by a couple of pixels in my
-								// testing. :(
-								// Next step is to change the "true" below to use a custom
-								// attribute that lets you control whether the header is shown.
-								if (true) {
+								// When the header isn't repeated, the THEAD is still cloned so
+								// columns keep their widths, but made as invisible as possible.
+								// It gets a zero height but still somehow affects the container
+								// height by a couple of pixels. :(
+								if (!repeatHeader) {
 									pos.style.visibility = "collapse";
 									pos.style.marginTop = "0px";
 									pos.style.marginBottom = "0px";
@@ -629,9 +630,8 @@ export function rebuildAncestors(node) {
 		// rebuild table headers and columns
 		if (parent.nodeName === "TABLE" && ancestor.parentElement && ancestor.parentElement.contains(ancestor)) {
 			let table = ancestor;
-			let repeatHeader = window.getComputedStyle(table).getPropertyValue("--pagedjs-table-repeat-header").trim();
-
-			if (repeatHeader !== "none") {
+			// Set by the Breaks handler from --pagedjs-table-repeat-header
+			if (table.dataset.repeatHeader !== "none") {
 				let thead = table.querySelector("thead");
 				if (thead) {
 					let clone = thead.cloneNode(true);
@@ -1196,11 +1196,17 @@ export function indexOfTextNode(node, parent, hyphen) {
 
 	// Use previous element's dataref to match if possible. Matching the text
 	// will potentially return the wrong node.
-	if (node.previousSibling) {
-		let matchingNode = parent.querySelector(
-			`[data-ref='${node.previousSibling.dataset.ref}']`,
-		);
-		return Array.prototype.indexOf.call(parent.childNodes, matchingNode) + 1;
+	// The previous sibling may be a text or comment node (no dataset), or an
+	// element without a ref; fall through to text matching in those cases.
+	let prevRef =
+		node.previousSibling &&
+		isElement(node.previousSibling) &&
+		node.previousSibling.dataset.ref;
+	if (prevRef) {
+		let matchingNode = parent.querySelector(`[data-ref='${prevRef}']`);
+		if (matchingNode) {
+			return Array.prototype.indexOf.call(parent.childNodes, matchingNode) + 1;
+		}
 	}
 
 	let nodeTextContent = node.textContent;
