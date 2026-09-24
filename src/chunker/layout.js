@@ -1293,6 +1293,23 @@ class Layout {
 			}
 		}
 
+		if (isText(rangeStart)) {
+			let adjusted = this.widowsAndOrphans(rangeStart, offset, rendered, bounds);
+			if (adjusted) {
+				if (adjusted.node === adjusted.block) {
+					// Moving the whole block: the range must cover all of it.
+					if (!rangeEnd || adjusted.block.contains(rangeEnd)) {
+						rangeEnd = adjusted.block;
+					}
+				} else if (!rangeEnd) {
+					// Breaking earlier: still reach the originally overflowing text.
+					rangeEnd = rangeStart;
+				}
+				startOfOverflow = rangeStart = adjusted.node;
+				offset = adjusted.offset;
+			}
+		}
+
 		let previousElement = nodeBefore(rangeStart, rendered, true);
 		let shouldContinue = true;
 		let newRangeStart = rangeStart;
@@ -1560,10 +1577,15 @@ class Layout {
 
 			let sibling = check,
 				siblingBounds;
+			// Skip a <br> too: one ending the overflowing line sits on that line,
+			// so it would otherwise count as visible content left on the page.
 			do {
 				sibling = sibling.nextSibling;
 				siblingBounds = sibling ? getBoundingClientRect(sibling) : undefined;
-			} while (sibling && !siblingBounds?.height);
+			} while (
+				sibling &&
+				(!siblingBounds?.height || sibling.nodeName === "BR")
+			);
 
 			if (sibling && siblingBounds?.height && !rowspanNeedsBreakAt) {
 				// Is the sibling entirely in overflow? If yes, so must all following
@@ -1655,6 +1677,129 @@ class Layout {
 		let after = nodeAfter(original);
 
 		return this.breakAt(after);
+	}
+
+	/**
+	 * Move a text break to honour the orphans and widows of its block.
+	 *
+	 * The browser's column layout already applies these properties in most
+	 * cases, but not all (e.g. it drops widows rather than move a whole block
+	 * when both can't be met), so the break is checked here.
+	 *
+	 * @param {Text} node - Text node the break falls in.
+	 * @param {number} offset - Offset of the break within node.
+	 * @param {Element} rendered - Current page's rendered content.
+	 * @param {DOMRect} bounds - Page bounds.
+	 * @returns {{block: Element, node: Node, offset: number}|undefined}
+	 *   The new break (node is the block itself to move it whole), or
+	 *   undefined to keep the break as is.
+	 */
+	widowsAndOrphans(node, offset, rendered, bounds) {
+		let block = node.parentElement;
+		while (
+			block &&
+			block !== rendered &&
+			!["block", "list-item", "flow-root"].includes(
+				window.getComputedStyle(block).display,
+			)
+		) {
+			block = block.parentElement;
+		}
+		if (!block || block === rendered) {
+			return;
+		}
+
+		let style = window.getComputedStyle(block);
+		let orphans = parseInt(style.orphans) || 1;
+		let widows = parseInt(style.widows) || 1;
+		if (orphans < 2 && widows < 2) {
+			return;
+		}
+
+		// Identify a line by its column and top, as overflow lays out in
+		// further columns to the right.
+		let lineKey = (rect) =>
+			Math.floor((rect.left - bounds.left) / bounds.width) +
+			":" +
+			Math.round(rect.top);
+
+		let before = [];
+		let after = new Set();
+		let textNodes = [];
+		let walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+		let range = document.createRange();
+		while (walker.nextNode()) {
+			let text = walker.currentNode;
+			if (!text.textContent.trim()) {
+				continue;
+			}
+			textNodes.push(text);
+
+			let parts = [];
+			if (text === node) {
+				parts.push([before, 0, offset], [after, offset, text.length]);
+			} else if (node.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_PRECEDING) {
+				parts.push([before, 0, text.length]);
+			} else {
+				parts.push([after, 0, text.length]);
+			}
+
+			for (let [lines, from, to] of parts) {
+				if (from >= to) {
+					continue;
+				}
+				range.setStart(text, from);
+				range.setEnd(text, to);
+				for (let rect of range.getClientRects()) {
+					if (!rect.width || !rect.height) {
+						continue;
+					}
+					let key = lineKey(rect);
+					if (lines === before && !before.includes(key)) {
+						before.push(key);
+					} else if (lines === after && !before.includes(key)) {
+						after.add(key);
+					}
+				}
+			}
+		}
+
+		if (!before.length || !after.size) {
+			return;
+		}
+
+		let keep = before.length;
+		if (after.size < widows) {
+			keep = before.length - (widows - after.size);
+		}
+		if (keep === before.length && keep >= orphans) {
+			return;
+		}
+
+		if (keep < orphans) {
+			// Move the whole block, unless nothing precedes it on this page -
+			// then it can't go any further and the break stays.
+			if (!nodeBefore(block, rendered)) {
+				return;
+			}
+			return { block, node: block, offset: 0 };
+		}
+
+		// Break at the start of the first line that should move.
+		let target = before[keep];
+		for (let text of textNodes) {
+			for (let i = 0; i < text.length; i++) {
+				if (!text.textContent[i].trim()) {
+					continue;
+				}
+				range.setStart(text, i);
+				range.setEnd(text, i + 1);
+				let rect = range.getClientRects()[0];
+				if (rect && lineKey(rect) === target) {
+					return { block, node: text, offset: i };
+				}
+			}
+		}
 	}
 
 	textBreak(node, start, end, vStart, vEnd) {

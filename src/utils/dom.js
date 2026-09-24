@@ -327,7 +327,9 @@ export function rebuildTableRow(node, alreadyRendered, existingChildren) {
 		let destColumn;
 		if (rowspan) {
 			if (!existingChildren) {
-				destColumn = column.cloneNode(false);
+				// The spanning cell started in an earlier row, so its content was
+				// fully laid out before the break; repeat it on the continuation.
+				destColumn = column.cloneNode(true);
 				// Adjust rowspan value.
 				destColumn.rowSpan = !column.rowSpan ? 0 : rowspan;
 			}

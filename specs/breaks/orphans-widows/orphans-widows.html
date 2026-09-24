@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<title>orphans-widows</title>
+
+	<script src="../../../dist/paged.polyfill.js"></script>
+
+	<style>
+		/* 15 lines of 20px per page. Each line is one 30-character word in a
+		   monospace font, too wide for two to share a line. */
+		@page {
+			size: 400px 300px;
+			margin: 0;
+		}
+
+		body {
+			margin: 0;
+			font: 16px/20px monospace;
+		}
+
+		p {
+			margin: 0;
+			orphans: 1;
+			widows: 1;
+		}
+
+		.case {
+			break-before: page;
+		}
+
+		.case:first-child {
+			break-before: auto;
+		}
+
+		.filler-11 { height: 220px; }
+		.filler-12 { height: 240px; }
+		.filler-13 { height: 260px; }
+		.filler-14 { height: 280px; }
+
+		#widow { widows: 2; }
+		#orphan { orphans: 2; }
+		#both { orphans: 2; widows: 2; }
+		#threes { orphans: 3; widows: 3; }
+		#br { widows: 2; }
+		#initial { orphans: initial; widows: initial; }
+	</style>
+</head>
+
+<body>
+	<!-- 3 lines fit, 1 would be widowed: move one more line over (2/2). -->
+	<div class="case">
+		<div class="filler-12"></div>
+		<p id="widow">widow01xxxxxxxxxxxxxxxxxxxxxxx widow02xxxxxxxxxxxxxxxxxxxxxxx widow03xxxxxxxxxxxxxxxxxxxxxxx widow04xxxxxxxxxxxxxxxxxxxxxxx</p>
+	</div>
+
+	<!-- 1 line fits, orphans: 2 needs 2: move the whole paragraph (0/4). -->
+	<div class="case">
+		<div class="filler-14"></div>
+		<p id="orphan">orphan01xxxxxxxxxxxxxxxxxxxxxx orphan02xxxxxxxxxxxxxxxxxxxxxx orphan03xxxxxxxxxxxxxxxxxxxxxx orphan04xxxxxxxxxxxxxxxxxxxxxx</p>
+	</div>
+
+	<!-- 2 fit, 1 widowed; pulling a line back leaves 1 orphan: move all (0/3). -->
+	<div class="case">
+		<div class="filler-13"></div>
+		<p id="both">both01xxxxxxxxxxxxxxxxxxxxxxxx both02xxxxxxxxxxxxxxxxxxxxxxxx both03xxxxxxxxxxxxxxxxxxxxxxxx</p>
+	</div>
+
+	<!-- 4 fit, 2 widowed with widows: 3: move one more line over (3/3). -->
+	<div class="case">
+		<div class="filler-11"></div>
+		<p id="threes">threes01xxxxxxxxxxxxxxxxxxxxxx threes02xxxxxxxxxxxxxxxxxxxxxx threes03xxxxxxxxxxxxxxxxxxxxxx threes04xxxxxxxxxxxxxxxxxxxxxx threes05xxxxxxxxxxxxxxxxxxxxxx threes06xxxxxxxxxxxxxxxxxxxxxx</p>
+	</div>
+
+	<!-- Same as #widow, but lines are separate text nodes split by <br>. -->
+	<div class="case">
+		<div class="filler-12"></div>
+		<p id="br">br01<br>br02<br>br03<br>br04</p>
+	</div>
+
+	<!-- Initial values are orphans: 2; widows: 2 (2/2). -->
+	<div class="case">
+		<div class="filler-12"></div>
+		<p id="initial">initial01xxxxxxxxxxxxxxxxxxxxx initial02xxxxxxxxxxxxxxxxxxxxx initial03xxxxxxxxxxxxxxxxxxxxx initial04xxxxxxxxxxxxxxxxxxxxx</p>
+	</div>
+
+	<!-- orphans: 1; widows: 1 allows the plain 3/1 break. -->
+	<div class="case">
+		<div class="filler-12"></div>
+		<p id="control">control01xxxxxxxxxxxxxxxxxxxxx control02xxxxxxxxxxxxxxxxxxxxx control03xxxxxxxxxxxxxxxxxxxxx control04xxxxxxxxxxxxxxxxxxxxx</p>
+	</div>
+</body>
+
+</html>
